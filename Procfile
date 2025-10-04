@@ -1,0 +1,1 @@
+web: ./linkedin-integration-app

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Connect (Minimal)</title>
+  <style>
+    :root { --bg:#f4f6f8; --card:#ffffff; --text:#1c1e21; --muted:#6b7280; --primary:#4f46e5; --border:#e5e7eb; }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans",sans-serif;color:var(--text)}
+    .container{max-width:480px;margin:24px auto;padding:0 16px}
+    h1{font-size:22px;margin:0 0 12px;color:var(--primary)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 8px 24px rgba(79,70,229,0.08)}
+    .row{display:flex;gap:8px}
+    .row .grow{flex:1}
+    label{display:block;font-size:13px;margin:10px 0 6px}
+    input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(79,70,229,0.15)}
+    textarea{min-height:96px}
+    .muted{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    button{appearance:none;border:0;border-radius:8px;padding:10px 14px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+    button:hover{filter:brightness(0.93)}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    .msg{margin-top:10px;font-size:13px}
+    .ok{color:#065f46;background:#d1fae5;padding:2px 6px;border-radius:6px}
+    .err{color:#b91c1c;background:#fee2e2;padding:2px 6px;border-radius:6px}
+    .list{list-style:none;margin:8px 0 0;padding:0}
+    .item{padding:10px;border:1px solid var(--border);border-radius:8px;margin-top:8px}
+    .section-title{font-size:16px;margin:0 0 8px;color:var(--primary)}
+    .divider{height:1px;background:var(--border);margin:16px 0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>LinkedIn Connect</h1>
+
+    <!-- Connect Section -->
+    <div class="card" id="connect">
+      <p class="muted">Minimal interface: credentials or Cookies login with optional verification code, aligned to backend API (POST /api/linkedin/connect).</p>
+      <div class="row">
+        <div class="grow">
+          <label>Name *</label>
+          <input id="name" placeholder="Your Name" />
+        </div>
+        <div class="grow">
+          <label>Email *</label>
+          <input id="email" type="email" placeholder="you@example.com" />
+        </div>
+      </div>
+
+      <label>Connection method</label>
+      <div class="row">
+        <label><input type="radio" name="method" value="credentials" checked /> Credentials</label>
+        <label><input type="radio" name="method" value="cookies" /> Cookies</label>
+      </div>
+
+      <div id="cred-fields">
+        <label>LinkedIn Username/Email *</label>
+        <input id="username" placeholder="linkedin@example.com" />
+        <label>LinkedIn Password *</label>
+        <input id="password" type="password" placeholder="••••••••" />
+      </div>
+
+      <div id="cookie-fields" style="display:none;">
+        <label>LinkedIn Cookies *</label>
+        <textarea id="cookies" placeholder="Paste the full Cookie header from www.linkedin.com after login (must include li_at)"></textarea>
+      </div>
+
+      <div id="code-fields" style="display:none;">
+        <label>Verification code (only if requested)</label>
+        <input id="verificationCode" placeholder="6-digit code" />
+        <p class="muted">If the previous response requested a verification code, enter it and submit again.</p>
+      </div>
+
+      <div class="actions">
+        <button id="connect-btn">Connect</button>
+      </div>
+      <div id="connect-msg" class="msg"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Linked Accounts -->
+    <div class="card" id="accounts">
+      <h2 class="section-title">Linked Accounts</h2>
+      <div class="row">
+        <div class="grow">
+          <label>Email *</label>
+          <input id="accounts-email" type="email" placeholder="Use the same email to fetch" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="accounts-btn">Fetch</button>
+        </div>
+      </div>
+      <div id="accounts-msg" class="msg"></div>
+      <ul id="accounts-list" class="list"></ul>
+    </div>
+  </div>
+
+  <script>
+    // 切換連線方式
+    document.querySelectorAll('input[name="method"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const isCred = document.querySelector('input[name="method"]:checked').value === 'credentials';
+        document.getElementById('cred-fields').style.display = isCred ? 'block' : 'none';
+        document.getElementById('cookie-fields').style.display = isCred ? 'none' : 'block';
+      });
+    });
+
+    // 送出連線
+    document.getElementById('connect-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('connect-btn');
+      const msg = document.getElementById('connect-msg');
+      msg.textContent = '';
+      btn.disabled = true;
+
+      const name = (document.getElementById('name').value || '').trim();
+      const email = (document.getElementById('email').value || '').trim();
+      const method = document.querySelector('input[name="method"]:checked').value;
+      const payload = { name, email, method };
+
+      if (method === 'credentials') {
+        payload.username = (document.getElementById('username').value || '').trim();
+        payload.password = document.getElementById('password').value || '';
+        const code = (document.getElementById('verificationCode').value || '').trim();
+        if (code) payload.verificationCode = code;
+        // remove extra aliases; backend expects username/password/verificationCode
+      } else {
+        payload.cookies = (document.getElementById('cookies').value || '').trim();
+      }
+
+      try {
+        const res = await fetch('/api/linkedin/connect', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const status = res.status;
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { message: text }; }
+
+        if (!res.ok) {
+          console.error(`API Error - Status: ${status}, Body: ${text}`);
+        }
+
+        const isOk = res.ok;
+        if (isOk && (data.success || (data.account_id || (data.data && data.data.account_id)))) {
+          const id = data.account_id || (data.data && data.data.account_id) || '';
+          msg.innerHTML = `<span class="ok">Connected successfully</span>${id ? `, Account ID: ${id}` : ''}`;
+          document.getElementById('verificationCode').value = '';
+          document.getElementById('code-fields').style.display = 'none';
+        } else {
+          const err = data.error || data.message || `Connection failed (HTTP ${status})`;
+          msg.innerHTML = `<span class="err">${err}</span>`;
+          if (method === 'credentials') {
+            document.getElementById('code-fields').style.display = 'block';
+          }
+        }
+      } catch (e) {
+        console.error('API Error - Network/Fetch Failed:', e);
+        msg.innerHTML = `<span class="err">Submit failed: ${e.message}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+
+      // 將 Email 同步到查詢區塊，便於使用者直接查詢
+      document.getElementById('accounts-email').value = email;
+    });
+
+    // 查詢已儲存帳號
+    document.getElementById('accounts-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('accounts-btn');
+      const msg = document.getElementById('accounts-msg');
+      const list = document.getElementById('accounts-list');
+      msg.textContent = '';
+      list.innerHTML = '';
+      btn.disabled = true;
+
+      const email = (document.getElementById('accounts-email').value || '').trim();
+      if (!email) { msg.innerHTML = '<span class="err">Please enter email</span>'; btn.disabled = false; return; }
+
+      try {
+        const res = await fetch(`/api/accounts/${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.success) {
+          const accounts = Array.isArray(data.accounts) ? data.accounts
+            : (Array.isArray(data.data) ? data.data
+               : (data.data && Array.isArray(data.data.accounts) ? data.data.accounts : []));
+          if (!accounts || accounts.length === 0) {
+            msg.innerHTML = '<span class="err">No accounts linked for this email</span>';
+          } else {
+            msg.innerHTML = `<span class="ok">Found ${accounts.length} account(s)</span>`;
+            list.innerHTML = accounts.map(a => {
+              const id = a.account_id || a.id || '';
+              const nm = a.name || '';
+              const em = a.email || email;
+              return `<li class="item">Account ID: ${id}<br/>Name: ${nm}<br/>Email: ${em}</li>`;
+            }).join('');
+          }
+        } else {
+          msg.innerHTML = `<span class="err">${data.error || data.message || 'Fetch failed'}</span>`;
+        }
+      } catch (e) {
+        msg.innerHTML = `<span class="err">Fetch failed: ${e.message}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
