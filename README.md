@@ -2,6 +2,9 @@
 
 A full-stack application that integrates with Unipile's LinkedIn API to connect and manage LinkedIn accounts. Built with **Go (Gin framework)** backend, **SQLite** database, and **React** frontend.
 
+![image](https://github.com/cindy5hsu/LinkedIn-Connect/blob/main/linkit-ui-overview.png)
+
+
 ## 🚀 Features
 
 - **LinkedIn Account Connection**: Connect via credentials or cookies
