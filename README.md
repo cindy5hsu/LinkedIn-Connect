@@ -166,7 +166,7 @@ Retrieve all linked accounts for a user.
 
 1. **Clone and Navigate**:
    ```bash
-   cd "d:\chatSheet AI"
+   cd "AI"
    ```
 
 2. **Install Dependencies**:
